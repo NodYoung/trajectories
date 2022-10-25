@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <list>
+#include <iostream>
 #include <Eigen/Core>
 #include "Trajectory.h"
 
@@ -72,7 +73,7 @@ Eigen::VectorXd sampleConfig() {
 }
 
 void randomTests() {
-	const int numIterations = 10000;
+	const int numIterations = 100;
 
 	Eigen::VectorXd maxVelocities(7);
 	maxVelocities << 1.309, 1.6406, 3.2812, 2.618, 5.236, 3.4907, 3.4907;

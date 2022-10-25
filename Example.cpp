@@ -84,9 +84,6 @@ int main() {
 	else {
 		cout << "Trajectory generation failed." << endl;
 	}
-
-	string s;
-	cin >> s;
 }
 
 
