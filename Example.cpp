@@ -37,6 +37,7 @@
  */
 
 #include <iostream>
+#include <glog/logging.h>
 #include <cstdio>
 #include <Eigen/Core>
 #include "Trajectory.h"
@@ -46,6 +47,9 @@ using namespace std;
 using namespace Eigen;
 
 int main() {
+  google::InitGoogleLogging("example");
+  google::SetStderrLogging(google::GLOG_INFO);
+
 	list<VectorXd> waypoints;
 	VectorXd waypoint(3);
 	waypoint << 0.0, 0.0, 0.0;

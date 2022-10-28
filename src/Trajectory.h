@@ -80,12 +80,12 @@ private:
 	bool getNextVelocitySwitchingPoint(double pathPos, TrajectoryStep &nextSwitchingPoint, double &beforeAcceleration, double &afterAcceleration);
 	bool integrateForward(std::list<TrajectoryStep> &trajectory, double acceleration);
 	void integrateBackward(std::list<TrajectoryStep> &startTrajectory, double pathPos, double pathVel, double acceleration);
-	double getMinMaxPathAcceleration(double pathPosition, double pathVelocity, bool max);
-	double getMinMaxPhaseSlope(double pathPosition, double pathVelocity, bool max);
-	double getAccelerationMaxPathVelocity(double pathPos) const;
-	double getVelocityMaxPathVelocity(double pathPos) const;
-	double getAccelerationMaxPathVelocityDeriv(double pathPos);
-	double getVelocityMaxPathVelocityDeriv(double pathPos);
+	double getMinMaxPathAcceleration(double pathPosition, double pathVelocity, bool max); /// 计算\ddot{s}^{max}
+	double getMinMaxPhaseSlope(double pathPosition, double pathVelocity, bool max); /// 计算任意一点处的\frac{\mathrm{d} \dot{s}^{max}_{acc}}{\mathrm{d} s}
+	double getAccelerationMaxPathVelocity(double pathPos) const;  /// 计算\dot{s}^{max}_{acc}，论文公式31
+	double getVelocityMaxPathVelocity(double pathPos) const;  /// 计算\dot{s}^{max}_{vel}
+	double getAccelerationMaxPathVelocityDeriv(double pathPos); /// 计算ALC曲线上的\frac{\mathrm{d} \dot{s}^{max}_{acc}}{\mathrm{d} s}
+	double getVelocityMaxPathVelocityDeriv(double pathPos); /// 计算VLC曲线上的\frac{\mathrm{d} \dot{s}^{max}_{vel}}{\mathrm{d} s}. 此时\ddot{q} = 0.
 	
 	std::list<TrajectoryStep>::const_iterator getTrajectorySegment(double time) const;
 	

@@ -59,9 +59,9 @@ Trajectory::Trajectory(const Path &path, const VectorXd &maxVelocity, const Vect
 	timeStep(timeStep),
 	cachedTime(numeric_limits<double>::max())
 {
-	trajectory.push_back(TrajectoryStep(0.0, 0.0));
+	trajectory.push_back(TrajectoryStep(0.0, 0.0)); ///添加s_{begin}
 	double afterAcceleration = getMinMaxPathAcceleration(0.0, 0.0, true);
-	while(valid && !integrateForward(trajectory, afterAcceleration) && valid) {
+	while(valid && !integrateForward(trajectory, afterAcceleration) && valid) { /// 算法步骤2：前向积分
 		double beforeAcceleration;
 		TrajectoryStep switchingPoint;
 		if(getNextSwitchingPoint(trajectory.back().pathPos, switchingPoint, beforeAcceleration, afterAcceleration)) {
@@ -170,12 +170,12 @@ bool Trajectory::getNextAccelerationSwitchingPoint(double pathPos, TrajectorySte
 			if((beforePathVel > afterPathVel
 				|| getMinMaxPhaseSlope(switchingPathPos - eps, switchingPathVel, false) > getAccelerationMaxPathVelocityDeriv(switchingPathPos - 2.0*eps))
 				&& (beforePathVel < afterPathVel
-				|| getMinMaxPhaseSlope(switchingPathPos + eps, switchingPathVel, true) < getAccelerationMaxPathVelocityDeriv(switchingPathPos + 2.0*eps)))
+				|| getMinMaxPhaseSlope(switchingPathPos + eps, switchingPathVel, true) < getAccelerationMaxPathVelocityDeriv(switchingPathPos + 2.0*eps)))  /// 论文公式38
 			{
 				break;
 			}
 		}
-		else {
+		else {  /// 论文VII.A.2) Continuous and Nondifferentiable
 			switchingPathVel = getAccelerationMaxPathVelocity(switchingPathPos);
 			beforeAcceleration = 0.0;
 			afterAcceleration = 0.0;
@@ -204,7 +204,7 @@ bool Trajectory::getNextVelocitySwitchingPoint(double pathPos, TrajectoryStep &n
 			start = true;
 		}
 	} while((!start || getMinMaxPhaseSlope(pathPos, getVelocityMaxPathVelocity(pathPos), false) > getVelocityMaxPathVelocityDeriv(pathPos))
-		&& pathPos < path.getLength());
+		&& pathPos < path.getLength()); ///论文公式40
 
 	if(pathPos >= path.getLength()) {
 		return true; // end of trajectory reached
@@ -239,7 +239,7 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 
 	while(true)
 	{
-		while(nextDiscontinuity != switchingPoints.end() && (nextDiscontinuity->first <= pathPos || !nextDiscontinuity->second)) {
+		while(nextDiscontinuity != switchingPoints.end() && (nextDiscontinuity->first <= pathPos || !nextDiscontinuity->second)) {  /// 找到pathPos起的第一个nextDiscontinuity->second为true的SP
 			nextDiscontinuity++;
 		}
 
@@ -249,12 +249,12 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		pathVel += timeStep * acceleration;
 		pathPos += timeStep * 0.5 * (oldPathVel + pathVel);
 
-		if(nextDiscontinuity != switchingPoints.end() && pathPos > nextDiscontinuity->first) {
+		if(nextDiscontinuity != switchingPoints.end() && pathPos > nextDiscontinuity->first) {  /// 这一步计算中跨过了SP
 			pathVel = oldPathVel + (nextDiscontinuity->first - oldPathPos) * (pathVel - oldPathVel) / (pathPos - oldPathPos);
 			pathPos = nextDiscontinuity->first;
 		}
 
-		if(pathPos > path.getLength()) {
+		if(pathPos > path.getLength()) {  /// 到达sf，go to step 5
 			trajectory.push_back(TrajectoryStep(pathPos, pathVel));
 			return true;
 		}
@@ -263,9 +263,9 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 			cout << "error" << endl;
 			return true;
 		}
-
+    /// pathVel大于VLC，但oldPathPos点处可以沿着VLC走。步骤2：go to step 3。已知沿着VLC走。
 		if(pathVel > getVelocityMaxPathVelocity(pathPos)
-			&& getMinMaxPhaseSlope(oldPathPos, getVelocityMaxPathVelocity(oldPathPos), false) <= getVelocityMaxPathVelocityDeriv(oldPathPos))
+			&& getMinMaxPhaseSlope(oldPathPos, getVelocityMaxPathVelocity(oldPathPos), false) <= getVelocityMaxPathVelocityDeriv(oldPathPos)) 
 		{
 			pathVel = getVelocityMaxPathVelocity(pathPos);
 		}
@@ -273,7 +273,7 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		trajectory.push_back(TrajectoryStep(pathPos, pathVel));
 		acceleration = getMinMaxPathAcceleration(pathPos, pathVel, true);
 
-		if(pathVel > getAccelerationMaxPathVelocity(pathPos) || pathVel > getVelocityMaxPathVelocity(pathPos)) {
+		if(pathVel > getAccelerationMaxPathVelocity(pathPos) || pathVel > getVelocityMaxPathVelocity(pathPos)) {  /// 超过CLC
 			// find more accurate intersection with max-velocity curve using bisection
 			TrajectoryStep overshoot = trajectory.back();
 			trajectory.pop_back();
@@ -285,13 +285,14 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 				const double midpoint = 0.5 * (before + after);
 				double midpointPathVel = 0.5 * (beforePathVel + afterPathVel);
 
+        /// midpointPathVel大于VLC，但before点处可以沿着VLC走。
 				if(midpointPathVel > getVelocityMaxPathVelocity(midpoint)
-					&& getMinMaxPhaseSlope(before, getVelocityMaxPathVelocity(before), false) <= getVelocityMaxPathVelocityDeriv(before))
+					&& getMinMaxPhaseSlope(before, getVelocityMaxPathVelocity(before), false) <= getVelocityMaxPathVelocityDeriv(before)) 
 				{
 					midpointPathVel = getVelocityMaxPathVelocity(midpoint);
 				}
 
-				if(midpointPathVel > getAccelerationMaxPathVelocity(midpoint) || midpointPathVel > getVelocityMaxPathVelocity(midpoint)) {
+				if(midpointPathVel > getAccelerationMaxPathVelocity(midpoint) || midpointPathVel > getVelocityMaxPathVelocity(midpoint)) {  /// 二分
 					after = midpoint;
 					afterPathVel = midpointPathVel;
 				}
@@ -300,18 +301,18 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 					beforePathVel = midpointPathVel;
 				}
 			}
-			trajectory.push_back(TrajectoryStep(before, beforePathVel));
+			trajectory.push_back(TrajectoryStep(before, beforePathVel));  /// 采到CLC曲线上的点
 		
-			if(getAccelerationMaxPathVelocity(after) < getVelocityMaxPathVelocity(after)) {
+			if(getAccelerationMaxPathVelocity(after) < getVelocityMaxPathVelocity(after)) { /// 触碰到ALC，步骤2：go to step 4
 				if(after > nextDiscontinuity->first) {
 					return false;
 				}
-				else if(getMinMaxPhaseSlope(trajectory.back().pathPos, trajectory.back().pathVel, true) > getAccelerationMaxPathVelocityDeriv(trajectory.back().pathPos)) {
+				else if(getMinMaxPhaseSlope(trajectory.back().pathPos, trajectory.back().pathVel, true) > getAccelerationMaxPathVelocityDeriv(trajectory.back().pathPos)) { /// trajectory sink。 步骤4，go to step 4? 
 					return false;
 				}
 			}
-			else {
-				if(getMinMaxPhaseSlope(trajectory.back().pathPos, trajectory.back().pathVel, false) > getVelocityMaxPathVelocityDeriv(trajectory.back().pathPos)) {
+			else {  /// 触碰到VLC
+				if(getMinMaxPhaseSlope(trajectory.back().pathPos, trajectory.back().pathVel, false) > getVelocityMaxPathVelocityDeriv(trajectory.back().pathPos)) { /// trajectory sink。 步骤3，go to step 4? 
 					return false;
 				}
 			}
@@ -351,7 +352,7 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 
 		// check for intersection between current start trajectory and backward trajectory segments
 		const double startSlope = (start2->pathVel - start1->pathVel) / (start2->pathPos - start1->pathPos);
-		const double intersectionPathPos = (start1->pathVel - pathVel + slope * pathPos - startSlope * start1->pathPos) / (slope - startSlope);
+		const double intersectionPathPos = (start1->pathVel - pathVel + slope * pathPos - startSlope * start1->pathPos) / (slope - startSlope); /// y=kx+b的形式，两条直线求交点
 		if(max(start1->pathPos, pathPos) - eps <= intersectionPathPos && intersectionPathPos <= eps + min(start2->pathPos, trajectory.front().pathPos)) {
 			const double intersectionPathVel = start1->pathVel + startSlope * (intersectionPathPos - start1->pathPos);
 			startTrajectory.erase(start2, startTrajectory.end());
@@ -374,7 +375,7 @@ double Trajectory::getMinMaxPathAcceleration(double pathPos, double pathVel, boo
 	for(unsigned int i = 0; i < n; i++) {
 		if(configDeriv[i] != 0.0) {
 			maxPathAcceleration = min(maxPathAcceleration,
-				maxAcceleration[i]/abs(configDeriv[i]) - factor * configDeriv2[i] * pathVel*pathVel / configDeriv[i]);
+				maxAcceleration[i]/abs(configDeriv[i]) - factor * configDeriv2[i] * pathVel*pathVel / configDeriv[i]);  /// 论文公式22和23
 		}
 	}
 	return factor * maxPathAcceleration;
@@ -396,13 +397,13 @@ double Trajectory::getAccelerationMaxPathVelocity(double pathPos) const {
 					if(A_ij != 0.0) {
 						maxPathVelocity = min(maxPathVelocity,
 							sqrt((maxAcceleration[i] / abs(configDeriv[i]) + maxAcceleration[j] / abs(configDeriv[j]))
-							/ abs(A_ij)));
+							/ abs(A_ij)));  /// 论文公式29
 					}
 				}
 			}
 		}
 		else if(configDeriv2[i] != 0.0) {
-			maxPathVelocity = min(maxPathVelocity, sqrt(maxAcceleration[i] / abs(configDeriv2[i])));
+			maxPathVelocity = min(maxPathVelocity, sqrt(maxAcceleration[i] / abs(configDeriv2[i])));  /// 论文公式20
 		}
 	}
 	return maxPathVelocity;
@@ -413,7 +414,7 @@ double Trajectory::getVelocityMaxPathVelocity(double pathPos) const {
 	const VectorXd tangent = path.getTangent(pathPos);
 	double maxPathVelocity = numeric_limits<double>::max();
 	for(unsigned int i = 0; i < n; i++) {
-		maxPathVelocity = min(maxPathVelocity, maxVelocity[i] / abs(tangent[i]));
+		maxPathVelocity = min(maxPathVelocity, maxVelocity[i] / abs(tangent[i])); /// 论文公式36
 	}
 	return maxPathVelocity;
 }
@@ -434,7 +435,7 @@ double Trajectory::getVelocityMaxPathVelocityDeriv(double pathPos) {
 		}
 	}
 	return - (maxVelocity[activeConstraint] * path.getCurvature(pathPos)[activeConstraint])
-		/ (tangent[activeConstraint] * abs(tangent[activeConstraint]));
+		/ (tangent[activeConstraint] * abs(tangent[activeConstraint])); /// 论文公式37
 }
 
 bool Trajectory::isValid() const {

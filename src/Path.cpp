@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <cmath>
 #include <Eigen/Geometry>
+#include <glog/logging.h>
 
 using namespace std;
 using namespace Eigen;
@@ -99,7 +100,7 @@ public:
 			return;
 		}
 
-		const Eigen::VectorXd startDirection = (intersection - start).normalized();
+		const Eigen::VectorXd startDirection = (intersection - start).normalized(); // 论文公式1
 		const Eigen::VectorXd endDirection = (end - intersection).normalized();
 
 		if((startDirection - endDirection).norm() < 0.000001) {
@@ -115,37 +116,37 @@ public:
 		const double endDistance = (end - intersection).norm();
 
 		double distance = std::min((start - intersection).norm(), (end - intersection).norm());
-		const double angle = acos(startDirection.dot(endDirection));
+		const double angle = acos(startDirection.dot(endDirection));  // 论文公式2
 
-		distance = std::min(distance, maxDeviation * sin(0.5 * angle) / (1.0 - cos(0.5 * angle)));  // enforce max deviation
+		distance = std::min(distance, maxDeviation * sin(0.5 * angle) / (1.0 - cos(0.5 * angle)));  // enforce max deviation  // 论文公式3
 
-		radius = distance / tan(0.5 * angle);
+		radius = distance / tan(0.5 * angle); // 论文公式4
 		length = angle * radius;
 
-		center = intersection + (endDirection - startDirection).normalized() * radius / cos(0.5 * angle);
-		x = (intersection - distance * startDirection - center).normalized();
+		center = intersection + (endDirection - startDirection).normalized() * radius / cos(0.5 * angle); // 论文公式5
+		x = (intersection - distance * startDirection - center).normalized(); // 论文公式6
 		y = startDirection;
 	}
 
 	Eigen::VectorXd getConfig(double s) const {
 		const double angle = s / radius;
-		return center + radius * (x * cos(angle) + y * sin(angle));
+		return center + radius * (x * cos(angle) + y * sin(angle)); // 论文公式7
 	}
 
 	Eigen::VectorXd getTangent(double s) const {
 		const double angle = s / radius;
-		return - x * sin(angle) + y * cos(angle);
+		return - x * sin(angle) + y * cos(angle); // 论文公式8
 	}
 
 	Eigen::VectorXd getCurvature(double s) const {
 		const double angle = s / radius;
-		return - 1.0 / radius * (x * cos(angle) + y * sin(angle));
+		return - 1.0 / radius * (x * cos(angle) + y * sin(angle));  // 论文公式9
 	}
 
 	list<double> getSwitchingPoints() const {
 		list<double> switchingPoints;
 		const double dim = x.size();
-		for(unsigned int i = 0; i < dim; i++) {
+		for(unsigned int i = 0; i < dim; i++) { /// 论文公式39。自己试着分解开就能开出来
 			double switchingAngle = atan2(y[i], x[i]);
 			if(switchingAngle < 0.0) {
 				switchingAngle += M_PI;
@@ -182,7 +183,7 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 	config2++;
 	list<VectorXd>::const_iterator config3;
 	VectorXd startConfig = *config1;
-	while(config2 != path.end()) {
+	while(config2 != path.end()) {  // 构造pathSegments，由CircularPathSegment和LinearPathSegment连接
 		config3 = config2;
 		config3++;
 		if(maxDeviation > 0.0 && config3 != path.end()) {
@@ -211,9 +212,11 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 			switchingPoints.push_back(make_pair(length + *point, false));
 		}
 		length += (*segment)->getLength();
-		while(!switchingPoints.empty() && switchingPoints.back().first >= length)
+		while(!switchingPoints.empty() && switchingPoints.back().first >= length) {/// 排除掉超过length的SP?为啥会有这种情况
+      LOG(INFO) << "switchingPoints.pop_back().switchingPoints.back().first=" << switchingPoints.back().first << ", length=" << length;
 			switchingPoints.pop_back();
-		switchingPoints.push_back(make_pair(length, true));
+    }
+		switchingPoints.push_back(make_pair(length, true)); /// 不同segment的连接处是一个SP
 	}
 	switchingPoints.pop_back();
 }
