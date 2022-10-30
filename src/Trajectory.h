@@ -63,6 +63,8 @@ public:
 	// Outputs the phase trajectory and the velocity limit curve in 2 files for debugging purposes.
 	void outputPhasePlaneTrajectory() const;
 
+  void exportJson() const;
+
 private:
 	struct TrajectoryStep {
 		TrajectoryStep() {}

@@ -8,6 +8,9 @@ set(glog_LIBRARY_DIRS "/usr/lib/x86_64-linux-gnu")
 set(glog_LIBS "glog")
 INCLUDE_DIRECTORIES(${glog_INCLUDE_DIRS})
 
+#json —— sudo apt install nlohmann-json3-dev
+find_package(nlohmann_json REQUIRED)
+
 #eigen
 # find_library(Eigen3 REQUIRED)
 set(EIGEN3_INCLUDE_DIRS "/usr/include/eigen3")
@@ -21,4 +24,4 @@ message(STATUS "SRC_LIST: " ${SRC_LIST})
 add_executable(example Example.cpp ${SRC_LIST})
 target_link_libraries(example ${glog_LIBS})
 add_executable(test Test.cpp ${SRC_LIST})
-target_link_libraries(test ${glog_LIBS})
+target_link_libraries(test ${glog_LIBS} nlohmann_json::nlohmann_json)

@@ -40,6 +40,7 @@
 #include <limits>
 #include <iostream>
 #include <fstream>
+#include <nlohmann/json.hpp>
 
 using namespace Eigen;
 using namespace std;
@@ -111,6 +112,41 @@ void Trajectory::outputPhasePlaneTrajectory() const {
 		file2 << it->pathPos << "  " << it->pathVel << endl;
 	}
 	file2.close();
+}
+
+void Trajectory::exportJson() const {
+  nlohmann::json j;
+  for(list<TrajectoryStep>::const_iterator it = trajectory.begin(); it != trajectory.end(); it++) {
+    nlohmann::json t;
+    t["s"] = it->pathPos;
+    t["sdot"] = it->pathVel;
+    j["trajectory"].push_back(t);
+	}
+	for(list<TrajectoryStep>::const_iterator it = endTrajectory.begin(); it != endTrajectory.end(); it++) {
+		nlohmann::json t;
+    t["s"] = it->pathPos;
+    t["sdot"] = it->pathVel;
+    j["end_trajectory"].push_back(t);
+	}
+  const double stepSize = path.getLength() / 100000.0;
+	for(double s = 0.0; s < path.getLength(); s += stepSize) {
+		double maxVelocity = getAccelerationMaxPathVelocity(s);
+		if(maxVelocity == numeric_limits<double>::infinity()) {
+      maxVelocity = 10.0;
+    }
+		nlohmann::json t;
+    t["s"] = s;
+    t["sdot"] = maxVelocity;
+    j["max_acc"].push_back(t);
+	}
+  for(double s = 0.0; s < path.getLength(); s += stepSize) {
+		nlohmann::json t;
+    t["s"] = s;
+    t["sdot"] = getVelocityMaxPathVelocity(s);
+    j["max_vel"].push_back(t);
+	}
+  std::ofstream o("../data/example.json");
+  o << std::setw(2) << j << std::endl;
 }
 
 // returns true if end of path is reached.
